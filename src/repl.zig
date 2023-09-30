@@ -37,6 +37,15 @@ pub const Repl = struct {
             return error.Exit;
         }
 
-        std.debug.print("EVAL: {s}\n", .{input});
+        var l = lexer.Lexer.init(input);
+
+        while (true) {
+            const token = l.next_token();
+            if (token == .eof) {
+                break;
+            }
+
+            std.debug.print("TOKEN: {any}\n", .{token});
+        }
     }
 };
