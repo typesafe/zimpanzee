@@ -145,7 +145,7 @@ const Keywords = std.ComptimeStringMap(Keyword, .{
 });
 
 pub const Token = union(enum) {
-    eof: void,
+    eof,
     illegal: u8,
     comment: []const u8,
 
@@ -154,27 +154,35 @@ pub const Token = union(enum) {
     integer: []const u8,
 
     // operators
-    assign: void,
-    plus: void,
-    minus: void,
-    asterisk: void,
-    fslash: void,
-    lt: void,
-    gt: void,
-    bang: void,
-    eq: void,
-    ne: void,
+    assign,
+    plus,
+    minus,
+    asterisk,
+    fslash,
+    lt,
+    gt,
+    bang,
+    eq,
+    ne,
 
     // separators
-    semicolon: void,
-    comma: void,
-    dot: void,
-    lbrace: void,
-    rbrace: void,
-    lparen: void,
-    rparen: void,
-    lbracket: void,
-    rbracket: void,
+    semicolon,
+    comma,
+    dot,
+    lbrace,
+    rbrace,
+    lparen,
+    rparen,
+    lbracket,
+    rbracket,
+
+    pub fn format(value: @This(), comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) std.os.WriteError!void {
+        return switch (value) {
+            .keyword => writer.print("<{s}>", .{@tagName(value.keyword)}),
+            .identifier => writer.print("<symbol:{s}>", .{value.identifier}),
+            else => writer.print("<{s}>", .{@tagName(value)}),
+        };
+    }
 };
 
 const testing = std.testing;
