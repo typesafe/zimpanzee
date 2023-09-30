@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "test",
+      "type": "lldb",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "program": "zig",
+      "args": ["test", "./src/lexer.zig"]
+    },
+    {
+      "name": "main",
+      "type": "lldb",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "program": "./zig-out/bin/zimpanzee",
+      "args": ["run", "./src/main.zig"],
+      "preLaunchTask": "build"
+    }
+  ]
+}
