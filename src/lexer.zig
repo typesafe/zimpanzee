@@ -144,40 +144,7 @@ const Keywords = std.ComptimeStringMap(Keyword, .{
     //.{ "false", .false_op },
 });
 
-pub const TokenType = enum {
-    eof,
-    illegal,
-    comment,
-
-    keyword,
-    identifier,
-    integer,
-
-    // operators
-    assign,
-    plus,
-    minus,
-    asterisk,
-    fslash,
-    lt,
-    gt,
-    bang,
-    eq,
-    ne,
-
-    // separators
-    semicolon,
-    comma,
-    dot,
-    lbrace,
-    rbrace,
-    lparen,
-    rparen,
-    lbracket,
-    rbracket,
-};
-
-pub const Token = union(TokenType) {
+pub const Token = union(enum) {
     eof: void,
     illegal: u8,
     comment: []const u8,
