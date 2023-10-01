@@ -17,3 +17,7 @@ fn exit() void {
     std.debug.print("\nExiting...\n", .{});
     std.os.exit(1);
 }
+
+test {
+    std.testing.refAllDeclsRecursive(@This());
+}

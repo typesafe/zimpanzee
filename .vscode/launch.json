@@ -7,7 +7,7 @@
       "request": "launch",
       "cwd": "${workspaceRoot}",
       "program": "zig",
-      "args": ["test", "./src/lexer.zig"]
+      "args": ["test", "./src/main.zig"]
     },
     {
       "name": "main",
