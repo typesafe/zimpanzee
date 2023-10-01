@@ -1,30 +1,35 @@
 const std = @import("std");
 
-pub const Lexer = struct {
+/// Returns a TokenIterator for the given input.
+pub fn get_tokens(input: []const u8) TokenIterator {
+    return TokenIterator{ .input = input };
+}
+
+pub const TokenIterator = struct {
     const Self = @This();
     input: []const u8,
     i: usize = 0,
 
-    pub fn init(input: []const u8) Self {
+    fn init(input: []const u8) Self {
         return .{ .input = input };
     }
 
-    /// Return the next token. The last token returned, is always `.eof`.
-    pub fn next_token(self: *Self) Token {
+    /// Returns the next token until the input is exhausted.
+    pub fn next(self: *Self) ?Token {
         const char = self.read_char();
 
         if (char) |c| {
             return switch (c) {
 
                 // operators
-                '!' => if (self.read_matching_char('=')) |_| .ne else .bang,
-                '=' => if (self.read_matching_char('=')) |_| .eq else .assign,
-                '/' => if (self.read_matching_char('/')) |_| .{ .comment = self.read_comment_line() } else .fslash,
-                '+' => .plus,
-                '-' => .minus,
-                '*' => .asterisk,
-                '<' => .lt,
-                '>' => .gt,
+                '!' => if (self.read_matching_char('=')) |_| .{ .operator = .ne } else .{ .operator = .bang },
+                '=' => if (self.read_matching_char('=')) |_| .{ .operator = .eq } else .{ .operator = .assign },
+                '/' => if (self.read_matching_char('/')) |_| .{ .comment = self.read_comment_line() } else .{ .operator = .fslash },
+                '+' => .{ .operator = .plus },
+                '-' => .{ .operator = .minus },
+                '*' => .{ .operator = .asterisk },
+                '<' => .{ .operator = .lt },
+                '>' => .{ .operator = .gt },
 
                 // separators
                 ';' => .semicolon,
@@ -53,9 +58,9 @@ pub const Lexer = struct {
 
                 else => return .{ .illegal = c },
             };
-        } else {
-            return .eof;
         }
+
+        return null;
     }
 
     /// Returns the next non-whitespace character or null when the end of the input is reached.
@@ -124,6 +129,37 @@ pub const Lexer = struct {
     }
 };
 
+pub const Token = union(enum) {
+    eof,
+    illegal: u8,
+    comment: []const u8,
+    identifier: []const u8,
+    integer: []const u8,
+
+    operator: Operator,
+    keyword: Keyword,
+
+    // separators
+    semicolon,
+    comma,
+    dot,
+    lbrace,
+    rbrace,
+    lparen,
+    rparen,
+    lbracket,
+    rbracket,
+
+    pub fn format(value: @This(), comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) std.os.WriteError!void {
+        return switch (value) {
+            .keyword => writer.print("<keyword:{s}>", .{@tagName(value.keyword)}),
+            .operator => writer.print("<op:{s}>", .{@tagName(value.operator)}),
+            .identifier => writer.print("<symbol:{s}>", .{value.identifier}),
+            else => writer.print("<{s}>", .{@tagName(value)}),
+        };
+    }
+};
+
 pub const Keyword = enum {
     let,
     ret,
@@ -144,104 +180,68 @@ const Keywords = std.ComptimeStringMap(Keyword, .{
     //.{ "false", .false_op },
 });
 
-pub const Token = union(enum) {
-    eof,
-    illegal: u8,
-    comment: []const u8,
-
-    keyword: Keyword,
-    identifier: []const u8,
-    integer: []const u8,
-
-    // operators
+/// Operators, sorted by their precedence.
+pub const Operator = enum {
+    bang,
+    fslash,
     assign,
+    lt,
+    gt,
+    eq,
+    ne,
     plus,
     minus,
     asterisk,
-    fslash,
-    lt,
-    gt,
-    bang,
-    eq,
-    ne,
-
-    // separators
-    semicolon,
-    comma,
-    dot,
-    lbrace,
-    rbrace,
-    lparen,
-    rparen,
-    lbracket,
-    rbracket,
-
-    pub fn format(value: @This(), comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) std.os.WriteError!void {
-        return switch (value) {
-            .keyword => writer.print("<{s}>", .{@tagName(value.keyword)}),
-            .identifier => writer.print("<symbol:{s}>", .{value.identifier}),
-            else => writer.print("<{s}>", .{@tagName(value)}),
-        };
-    }
 };
 
 const testing = std.testing;
 
 test "Lexer.next_token > literal to var assignment" {
     const input = "let foo = 123;";
-    var l = Lexer.init(input);
 
-    try expectTokens(&l, &[_]Token{
+    try expectTokens(get_tokens(input), &[_]Token{
         .{ .keyword = .let },
         .{ .identifier = "foo" },
-        .assign,
+        .{ .operator = .assign },
         .{ .integer = "123" },
         .semicolon,
-        .eof,
     });
 }
 
 test "Lexer.next_token > sum of ints" {
     const input = "1+2;";
-    var l = Lexer.init(input);
 
-    try expectTokens(&l, &[_]Token{
+    try expectTokens(get_tokens(input), &[_]Token{
         .{ .integer = "1" },
-        .plus,
+        .{ .operator = .plus },
         .{ .integer = "2" },
         .semicolon,
-        .eof,
     });
 }
 
 test "Lexer.next_token > operators" {
     const input = "!= == = !true<>*.1+2;";
-    var l = Lexer.init(input);
 
-    try expectTokens(&l, &[_]Token{
-        .ne,
-        .eq,
-        .assign,
-        .bang,
+    try expectTokens(get_tokens(input), &[_]Token{
+        .{ .operator = .ne },
+        .{ .operator = .eq },
+        .{ .operator = .assign },
+        .{ .operator = .bang },
         .{ .identifier = "true" },
-        .lt,
-        .gt,
-        .asterisk,
+        .{ .operator = .lt },
+        .{ .operator = .gt },
+        .{ .operator = .asterisk },
         .dot,
         .{ .integer = "1" },
-        .plus,
+        .{ .operator = .plus },
         .{ .integer = "2" },
         .semicolon,
-        .eof,
     });
 
-    l = Lexer.init("a == b");
-
-    try expectTokens(&l, &[_]Token{
+    try expectTokens(get_tokens("a == b"), &[_]Token{
         .{ .identifier = "a" },
-        .eq,
+        .{ .operator = .eq },
         .{ .identifier = "b" },
-        .eof,
     });
 }
 
@@ -255,26 +255,25 @@ test "Lexer.next_token > variables, function declaration and invocation" {
         \\};
         \\   let result = add(five, ten);
     ;
-    var l = Lexer.init(input);
 
-    try expectTokens(&l, &[_]Token{
+    try expectTokens(get_tokens(input), &[_]Token{
         .{ .comment = " comment1" },
         .{ .keyword = .let },
         .{ .identifier = "five" },
-        .assign,
+        .{ .operator = .assign },
         .{ .integer = "5" },
         .semicolon,
         .{ .comment = " comment2" },
 
         .{ .keyword = .let },
         .{ .identifier = "ten" },
-        .assign,
+        .{ .operator = .assign },
         .{ .integer = "10" },
         .semicolon,
 
         .{ .keyword = .let },
         .{ .identifier = "add" },
-        .assign,
+        .{ .operator = .assign },
         .{ .keyword = ._fn },
         .lparen,
         .{ .identifier = "x" },
@@ -283,7 +282,7 @@ test "Lexer.next_token > variables, function declaration and invocation" {
         .rparen,
         .lbrace,
         .{ .identifier = "x" },
-        .plus,
+        .{ .operator = .plus },
         .{ .identifier = "y" },
         .semicolon,
         .rbrace,
@@ -291,7 +290,7 @@ test "Lexer.next_token > variables, function declaration and invocation" {
 
         .{ .keyword = .let },
         .{ .identifier = "result" },
-        .assign,
+        .{ .operator = .assign },
         .{ .identifier = "add" },
         .lparen,
         .{ .identifier = "five" },
@@ -299,14 +298,14 @@ test "Lexer.next_token > variables, function declaration and invocation" {
         .{ .identifier = "ten" },
         .rparen,
         .semicolon,
-
-        .eof,
     });
 }
 
-fn expectTokens(l: *Lexer, t: []const Token) !void {
+fn expectTokens(l: TokenIterator, t: []const Token) !void {
+    var it = l;
+
     for (t) |value| {
-        const actual = l.next_token();
+        const actual = (&it).next().?;
 
         try switch (value) {
             .keyword => testing.expectEqual(value.keyword, actual.keyword),
