@@ -1,5 +1,7 @@
 const std = @import("std");
-const lexer = @import("./lexer.zig");
+const Lexer = @import("./Lexer.zig");
+const ast = @import("./ast.zig");
+const Parser = @import("./Parser.zig");
 
 pub const Repl = struct {
     allocator: std.mem.Allocator,
@@ -31,20 +33,17 @@ pub const Repl = struct {
     }
 
     fn evaluate(self: *Repl, input: []u8) !void {
-        _ = self;
-
         if (std.mem.eql(u8, input, "exit")) {
             return error.Exit;
         }
 
-        var l = lexer.Lexer.init(input);
+        const p = try Parser.parseProgram(input, self.allocator);
+        defer p.deinit();
 
-        while (true) {
-            const token = l.next_token();
-            if (token == .eof) {
-                break;
-            }
+        // const program = try p.parse_program();
+        var it = Lexer.get_tokens(input);
 
+        while ((&it).next()) |token| {
             std.debug.print("TOKEN: {any}\n", .{token});
         }
     }
