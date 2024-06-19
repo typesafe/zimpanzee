@@ -8,11 +8,11 @@ pub fn on_sig_int(comptime callback: fn () void) !void {
             callback();
         }
     }.internal_handler;
-    const act = std.os.Sigaction{
+    const act = std.posix.Sigaction{
         .handler = .{ .handler = internal_handler },
-        .mask = std.os.empty_sigset,
+        .mask = std.posix.empty_sigset,
         .flags = 0,
     };
 
-    try std.os.sigaction(std.os.SIG.INT, &act, null);
+    try std.posix.sigaction(std.posix.SIG.INT, &act, null);
 }

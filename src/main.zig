@@ -15,7 +15,7 @@ pub fn main() !void {
 
 fn exit() void {
     std.debug.print("\nExiting...\n", .{});
-    std.os.exit(1);
+    std.posix.exit(1);
 }
 
 test {

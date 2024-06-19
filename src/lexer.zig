@@ -150,7 +150,7 @@ pub const Token = union(enum) {
     lbracket,
     rbracket,
 
-    pub fn format(value: @This(), comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) std.os.WriteError!void {
+    pub fn format(value: @This(), comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
         return switch (value) {
             .keyword => writer.print("<keyword:{s}>", .{@tagName(value.keyword)}),
             .operator => writer.print("<op:{s}>", .{@tagName(value.operator)}),
